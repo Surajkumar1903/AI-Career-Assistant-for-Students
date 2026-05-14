@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block title %}Skill Recommendations — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">AI Skill Recommendations</h1>
+    <p class="text-muted mb-0">
+        Suggestions are grouped into <strong>technical</strong>, <strong>soft</strong>, <strong>AI/ML</strong>, and <strong>web development</strong> skills.
+        We rank candidates with scikit-learn TF–IDF similarity against your skills + target field.
+    </p>
+</div>
+
+<div class="card mb-4 animate-on-scroll">
+    <div class="card-header"><i class="fas fa-sliders me-2 text-primary"></i>Inputs</div>
+    <div class="card-body">
+        <form method="POST" class="row g-3" onsubmit="if(window.Loader){Loader.show('Ranking skills…');}">
+            <div class="col-md-8">
+                <label class="form-label">Skills (comma-separated) — leave blank to use your latest resume analysis</label>
+                <input class="form-control" name="skills" value="{{ manual_skills }}"
+                       placeholder="Python, Git, Public Speaking, HTML…">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Target field</label>
+                <input class="form-control" name="target_field" value="{{ target_field }}"
+                       placeholder="web development, data science, ai/ml…">
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-brain me-2"></i>Generate recommendations</button>
+                {% if latest %}
+                <span class="text-muted small ms-2">Latest analysis: {{ latest.analyzed_at.strftime('%Y-%m-%d') }} (ATS {{ latest.ats_score|round(1) }})</span>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if buckets %}
+<div class="row g-4">
+    {% for title, key, icon in [
+        ('Technical skills', 'technical', 'fa-microchip'),
+        ('Soft skills', 'soft_skills', 'fa-people-arrows'),
+        ('AI / ML skills', 'aiml', 'fa-robot'),
+        ('Web development', 'web_development', 'fa-code')
+    ] %}
+    <div class="col-md-6 animate-on-scroll">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas {{ icon }} me-2 text-primary"></i>{{ title }}
+            </div>
+            <div class="card-body">
+                <input class="form-control form-control-sm mb-3 skill-bucket-search" data-target="bucket-{{ key }}" placeholder="Filter…">
+                <div id="bucket-{{ key }}">
+                    {% for s in buckets[key] %}
+                    <span class="skill-tag skill-tag-neutral filter-skill-tag">{{ s }}</span>
+                    {% else %}
+                    <span class="text-muted">You already cover most of our suggestions in this bucket — great!</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info mb-0">
+    {% if latest %}
+    Submit the form to refresh recommendations, or add manual skills for a what-if analysis.
+    {% else %}
+    Upload a resume first (or type skills manually) to generate recommendations.
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.skill-bucket-search').forEach(input => {
+    const id = input.getAttribute('data-target');
+    input.addEventListener('input', () => {
+      const q = input.value.toLowerCase();
+      const root = document.getElementById(id);
+      if (!root) return;
+      root.querySelectorAll('.filter-skill-tag').forEach(tag => {
+        tag.style.display = tag.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

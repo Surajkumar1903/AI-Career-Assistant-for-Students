@@ -1,0 +1,45 @@
+{% extends "layout.html" %}
+{% block title %}Admin — Recommendations{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Managing recommendations</h1>
+    <p class="text-muted mb-0">
+        This app uses curated, code-first knowledge bases so results stay fast and predictable.
+        To change what users see, edit the Python modules below and redeploy.
+    </p>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">Core engines</div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li class="mb-2"><code>utils/career_engine.py</code> — roadmaps & phases</li>
+                    <li class="mb-2"><code>utils/interview_engine.py</code> — question banks</li>
+                    <li class="mb-2"><code>utils/project_engine.py</code> — project ideas</li>
+                    <li class="mb-2"><code>utils/cert_engine.py</code> — certification catalog</li>
+                    <li class="mb-2"><code>utils/linkedin_engine.py</code> — LinkedIn templates</li>
+                    <li class="mb-2"><code>utils/skill_recommend.py</code> — skill buckets + TF–IDF ranking</li>
+                    <li class="mb-0"><code>utils/ats_scorer.py</code> — ATS rubric weights</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">Optional AI APIs</div>
+            <div class="card-body">
+                <p class="text-muted">Set keys in your environment to enable richer chat responses:</p>
+                <ul class="mb-0">
+                    <li><code>OPENAI_API_KEY</code></li>
+                    <li><code>GEMINI_API_KEY</code></li>
+                </ul>
+                <hr class="border-secondary opacity-25">
+                <p class="small text-muted mb-0">See <code>utils/chatbot_engine.py</code> for the integration flow.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

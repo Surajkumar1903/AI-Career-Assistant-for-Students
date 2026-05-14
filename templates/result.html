@@ -1,0 +1,129 @@
+{% extends "layout.html" %}
+{% block title %}Analysis Result — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Resume Analysis</h1>
+        <p class="text-muted mb-0">Field focus: <span class="text-white">{{ analysis.career_field|replace('_',' ')|title }}</span></p>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="{{ url_for('resume.analyzer') }}"><i class="fas fa-arrow-left me-2"></i>Back</a>
+        <a class="btn btn-primary" href="{{ url_for('resume.download_report', analysis_id=analysis.id) }}">
+            <i class="fas fa-file-pdf me-2"></i>Download PDF report
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-4">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-bullseye me-2 text-primary"></i>ATS Score</div>
+            <div class="card-body text-center py-4">
+                <div class="score-ring-container mb-2">
+                    <svg width="160" height="160" class="score-ring">
+                        <circle cx="80" cy="80" r="62" fill="none" stroke="rgba(148,163,184,0.25)" stroke-width="10"></circle>
+                        <circle id="scoreCircle" cx="80" cy="80" r="62" fill="none" stroke="#6366f1" stroke-width="10"
+                                stroke-linecap="round" stroke-dasharray="389" stroke-dashoffset="389"></circle>
+                    </svg>
+                    <div class="score-text">
+                        <div class="score-value" id="scoreValue">0</div>
+                        <div class="score-label">/ 100</div>
+                    </div>
+                </div>
+                <p class="text-muted small mb-0">Heuristic ATS-style score based on structure, keywords, and completeness.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-wand-magic-sparkles me-2 text-primary"></i>Improvement suggestions</div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    {% for tip in suggestions %}
+                    <li class="mb-2">{{ tip }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-check-circle me-2 text-success"></i>Matched keywords</span>
+                <input class="form-control form-control-sm" style="max-width: 220px;" id="skillSearchFound" placeholder="Filter…">
+            </div>
+            <div class="card-body">
+                {% for s in skills_found %}
+                <span class="skill-tag skill-tag-found filter-skill-found">{{ s }}</span>
+                {% else %}
+                <span class="text-muted">None detected for this rubric.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-minus-circle me-2 text-danger"></i>Missing / weak keywords</span>
+                <input class="form-control form-control-sm" style="max-width: 220px;" id="skillSearchMissing" placeholder="Filter…">
+            </div>
+            <div class="card-body">
+                {% for s in skills_missing %}
+                <span class="skill-tag skill-tag-missing filter-skill-missing">{{ s }}</span>
+                {% else %}
+                <span class="text-muted">Nothing missing for this target field — nice.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-graduation-cap me-2 text-primary"></i>Education (extracted)</div>
+            <div class="card-body">
+                <pre class="mb-0 text-wrap" style="white-space: pre-wrap; font-family: inherit;">{{ analysis.education or '—' }}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-briefcase me-2 text-primary"></i>Experience (extracted)</div>
+            <div class="card-body">
+                <pre class="mb-0 text-wrap" style="white-space: pre-wrap; font-family: inherit;">{{ analysis.experience or '—' }}</pre>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-certificate me-2 text-primary"></i>Certifications (signals)</div>
+            <div class="card-body">
+                {% if certifications %}
+                    <ul class="mb-0">
+                        {% for c in certifications %}
+                        <li class="mb-1">{{ c }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <span class="text-muted">No certification keywords detected.</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  animateScoreRing({{ analysis.ats_score|float }});
+  initSearch('skillSearchFound', 'filter-skill-found');
+  initSearch('skillSearchMissing', 'filter-skill-missing');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block title %}AI Assistant — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">AI Career Chatbot</h1>
+    <p class="text-muted mb-0">Ask about resumes, interviews, skills, and LinkedIn. Optional: use your microphone for voice input (browser support varies).</p>
+</div>
+
+<div class="card animate-on-scroll">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-robot me-2 text-primary"></i>Chat</span>
+        <span class="small text-muted">Powered by rules + optional Gemini/OpenAI keys</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="chat-message bot">
+                    <div class="chat-bubble">
+                        Hi {{ current_user.username }}! Ask me anything about your career journey, or try:
+                        <ul class="mb-0 mt-2">
+                            <li>“How do I improve my ATS score?”</li>
+                            <li>“What should I learn for AI/ML?”</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <button type="button" class="btn btn-outline-secondary" id="voiceBtn" title="Voice input">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <form id="chatForm" class="flex-grow-1 d-flex gap-2">
+                    <input class="form-control" id="chatInput" placeholder="Type your message…" autocomplete="off">
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-paper-plane"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

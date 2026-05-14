@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block title %}Project Ideas — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4 d-flex flex-wrap justify-content-between gap-3">
+    <div>
+        <h1 class="h3 fw-bold mb-1">AI Project Recommendations</h1>
+        <p class="text-muted mb-0">Beginner → advanced ideas with descriptions and tech stacks.</p>
+    </div>
+    <input class="form-control" style="max-width: 260px;" id="projectSearch" placeholder="Search projects…">
+</div>
+
+<div class="card mb-4 animate-on-scroll">
+    <div class="card-header"><i class="fas fa-sliders me-2 text-primary"></i>Filters</div>
+    <div class="card-body">
+        <form method="POST" class="row g-3" onsubmit="if(window.Loader){Loader.show('Finding projects…');}">
+            <div class="col-md-6">
+                <label class="form-label">Your skills</label>
+                <input class="form-control" name="skills" value="{{ request.form.get('skills','') }}" placeholder="Python, Flask, React…">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Domain</label>
+                <select class="form-select" name="domain">
+                    <option value="">Any</option>
+                    {% for d in domains %}
+                    <option value="{{ d }}" {% if d == selected_domain %}selected{% endif %}>{{ d }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Level</label>
+                <select class="form-select" name="level">
+                    {% for lvl in ['beginner','intermediate','advanced'] %}
+                    <option value="{{ lvl }}" {% if lvl == selected_level %}selected{% endif %}>{{ lvl|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-lightbulb me-2"></i>Recommend</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if projects %}
+<div class="row g-4">
+    {% for p in projects %}
+    <div class="col-md-6 col-xl-4 filter-project-item animate-on-scroll">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">{{ p.title }}</span>
+                <span class="badge bg-secondary">{{ p.level|title }}</span>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted mb-2">{{ p.domain }}</div>
+                <p class="mb-3">{{ p.description }}</p>
+                <div class="small text-muted mb-1">Technologies</div>
+                {% for t in p.technologies %}
+                <span class="skill-tag skill-tag-neutral">{{ t }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">Submit the form to generate tailored project ideas.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => initSearch('projectSearch', 'filter-project-item'));
+</script>
+{% endblock %}

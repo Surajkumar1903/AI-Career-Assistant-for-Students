@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+{% block title %}Resume Analyzer — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Resume Analyzer</h1>
+    <p class="text-muted mb-0">Upload a PDF or Word resume. We extract skills, education, experience, and certifications, then compute an ATS-style score.</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card animate-on-scroll">
+            <div class="card-header"><i class="fas fa-upload me-2 text-primary"></i>Upload</div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="resumeForm"
+                      onsubmit="if(window.Loader){Loader.show('Analyzing resume…');}">
+                    <div class="upload-zone mb-4" id="uploadZone">
+                        <div class="upload-icon text-primary"><i class="fas fa-cloud-upload-alt"></i></div>
+                        <h5 class="mb-2">Drag & drop your resume here</h5>
+                        <p class="text-muted mb-3">PDF, DOCX (max 16MB)</p>
+                        <input type="file" name="resume" id="resumeFile" class="d-none" accept=".pdf,.doc,.docx" required>
+                        <span class="btn btn-outline-primary btn-sm">Browse files</span>
+                    </div>
+
+                    <div id="filePreview" class="alert alert-info d-none">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <div>
+                                <div class="fw-semibold" id="fileName">—</div>
+                                <div class="small text-muted" id="fileSize">—</div>
+                            </div>
+                            <i class="fas fa-file-alt fa-2x text-primary"></i>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Target career field (for keyword matching)</label>
+                        <select class="form-select" name="target_field">
+                            <option value="general">General / Mixed</option>
+                            <option value="web development">Web Development</option>
+                            <option value="data science">Data Science</option>
+                            <option value="ai/ml">AI / ML</option>
+                            <option value="cloud computing">Cloud Computing</option>
+                            <option value="cybersecurity">Cybersecurity</option>
+                            <option value="mobile development">Mobile Development</option>
+                            <option value="devops">DevOps</option>
+                        </select>
+                        <div class="form-text">This adjusts the “missing skills” checklist — not a job application.</div>
+                    </div>
+
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="fas fa-wand-magic-sparkles me-2"></i>Analyze Resume
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-4 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-clock-rotate-left me-2 text-primary"></i>Recent analyses</div>
+            <div class="card-body">
+                {% if history %}
+                <div class="list-group list-group-flush">
+                    {% for h in history %}
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                       href="{{ url_for('resume.result', analysis_id=h.id) }}">
+                        <div>
+                            <div class="fw-semibold">{{ h.career_field|title }}</div>
+                            <div class="small text-muted">{{ h.analyzed_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        </div>
+                        <span class="badge bg-primary rounded-pill">{{ h.ats_score|round(0) }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-0">No analyses yet — your history will appear here.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card animate-on-scroll">
+            <div class="card-header"><i class="fas fa-lightbulb me-2 text-primary"></i>Tips for best results</div>
+            <div class="card-body small text-muted">
+                <ul class="mb-0 ps-3">
+                    <li class="mb-2">Prefer text-based PDFs (not scanned images).</li>
+                    <li class="mb-2">Include measurable outcomes where possible.</li>
+                    <li class="mb-0">After changes, re-upload to track ATS trend on your dashboard.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

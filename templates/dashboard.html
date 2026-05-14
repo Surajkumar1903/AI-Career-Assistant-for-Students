@@ -1,0 +1,296 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+
+<div class="dash-page">
+    {# —— Hero + quick actions —— #}
+    <div class="row g-4 mb-4 align-items-stretch">
+        <div class="col-xl-8">
+            <div class="neo-card neo-card--hero dash-hero h-100">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <p class="dash-kicker mb-2"><i class="fas fa-wand-magic-sparkles me-2"></i>Powered by AI</p>
+                        <h1 class="dash-hero-title mb-3">Your AI Career Assistant: <span class="text-gradient">Smart. Personal. Powerful.</span></h1>
+                        <p class="dash-hero-lead text-muted mb-4">
+                            Analyze resumes, grow skills, and prep for interviews — all in one neon-fast workspace.
+                        </p>
+                        <a href="{{ url_for('resume.analyzer') }}" class="btn btn-hero-cta">
+                            <i class="fas fa-file-upload me-2"></i>Analyze Resume
+                        </a>
+                    </div>
+                    <div class="col-lg-5 text-center">
+                        <div class="dash-hero-visual">
+                            <div class="dash-orbit dash-orbit--1"><i class="fas fa-file-alt"></i></div>
+                            <div class="dash-orbit dash-orbit--2"><i class="fas fa-bullseye"></i></div>
+                            <div class="dash-orbit dash-orbit--3"><i class="fas fa-chart-line"></i></div>
+                            <div class="dash-orbit dash-orbit--4"><i class="fab fa-linkedin"></i></div>
+                            <div class="dash-orbit dash-orbit--5"><i class="fas fa-code"></i></div>
+                            <div class="dash-bot">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="neo-card h-100 dash-quick-card">
+                <div class="neo-card-header mb-3">Quick actions</div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('resume.analyzer') }}" class="quick-action quick-action--purple">
+                        <i class="fas fa-cloud-upload-alt"></i><span>Upload Resume</span><i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    <a href="{{ url_for('career.roadmap') }}" class="quick-action quick-action--blue">
+                        <i class="fas fa-route"></i><span>Generate Roadmap</span><i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    <a href="{{ url_for('interview.prep') }}" class="quick-action quick-action--green">
+                        <i class="fas fa-microphone"></i><span>Interview Practice</span><i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                    <a href="{{ url_for('chatbot.chat') }}" class="quick-action quick-action--orange">
+                        <i class="fas fa-robot"></i><span>AI Chat Assistant</span><i class="fas fa-chevron-right ms-auto"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# —— Metric tiles —— #}
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="neo-card neo-metric h-100 text-center">
+                <div class="neo-metric-ring-wrap mx-auto mb-3">
+                    <svg width="120" height="120" class="neo-ring-svg">
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(99,102,241,0.15)" stroke-width="8"></circle>
+                        <circle id="dashAtsCircle" cx="60" cy="60" r="52" fill="none" stroke="url(#gradAts)" stroke-width="8"
+                                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"
+                                transform="rotate(-90 60 60)"></circle>
+                        <defs>
+                            <linearGradient id="gradAts" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#22d3ee"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="neo-metric-ring-label">
+                        <span class="neo-metric-num" id="dashAtsValue">{% if latest %}{{ ats_score|round(0)|int }}{% else %}—{% endif %}</span>
+                        <span class="neo-metric-sub">ATS</span>
+                    </div>
+                </div>
+                <div class="fw-semibold mb-1">{{ ats_label }}</div>
+                <p class="small text-muted mb-3">Keyword & structure fit</p>
+                <a href="{{ url_for('resume.analyzer') }}" class="btn btn-sm btn-outline-primary w-100 rounded-pill">Improve score</a>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="neo-card neo-metric h-100">
+                <div class="neo-metric-icon neo-metric-icon--shield mb-3"><i class="fas fa-shield-alt"></i></div>
+                <div class="neo-metric-big">{{ profile_strength }}%</div>
+                <div class="fw-semibold mb-1">Profile strength</div>
+                <p class="small text-muted mb-3">Resume depth & skills breadth</p>
+                <a href="{{ url_for('auth.profile') }}" class="btn btn-sm btn-outline-secondary w-100 rounded-pill">View suggestions</a>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="neo-card neo-metric h-100">
+                <div class="neo-metric-icon neo-metric-icon--map mb-3"><i class="fas fa-map-marked-alt"></i></div>
+                <div class="neo-metric-label text-muted small mb-1">Goal</div>
+                <div class="fw-semibold mb-2 text-truncate" title="{{ pred_field }}">{{ pred_field }}</div>
+                <div class="progress neo-progress mb-2">
+                    <div class="progress-bar neo-progress-bar" style="width: {{ roadmap_progress }}%"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mb-3">
+                    <span>Roadmap progress</span><span>{{ roadmap_progress }}%</span>
+                </div>
+                <a href="{{ url_for('career.roadmap') }}" class="btn btn-sm btn-outline-secondary w-100 rounded-pill">Open roadmap</a>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="neo-card neo-metric h-100">
+                <div class="neo-metric-icon neo-metric-icon--mic mb-3"><i class="fas fa-microphone"></i></div>
+                <div class="neo-metric-big">{{ interview_ready }}%</div>
+                <div class="fw-semibold mb-1">Interview ready</div>
+                <p class="small text-muted mb-3">Based on skills & practice signals</p>
+                <a href="{{ url_for('interview.prep') }}" class="btn btn-sm btn-outline-secondary w-100 rounded-pill">Practice more</a>
+            </div>
+        </div>
+    </div>
+
+    {# —— Analytics row —— #}
+    <div id="dash-analytics" class="row g-4 mb-4 scroll-margin-top">
+        <div class="col-lg-8">
+            <div class="neo-card neo-card--glow h-100">
+                <div class="neo-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span><i class="fas fa-chart-area me-2 text-info"></i>Career progress</span>
+                    {% if latest %}
+                    <a class="btn btn-sm btn-neo-ghost" href="{{ url_for('resume.result', analysis_id=latest.id) }}">Latest report</a>
+                    {% endif %}
+                </div>
+                <div class="neo-card-body-chart">
+                    {% if total_analyses %}
+                    <div class="chart-canvas-wrap">
+                        <canvas id="atsChart"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="neo-empty-state">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Upload a resume to unlock your ATS trend line.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="neo-card h-100 mb-4">
+                <div class="neo-card-header">Skill mix</div>
+                <div class="neo-card-body-chart neo-card-body-chart--short d-flex align-items-center justify-content-center">
+                    <div class="chart-doughnut-wrap">
+                        <canvas id="skillsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="neo-card neo-card--compact">
+                <div class="neo-card-header">Skills progress</div>
+                <div class="neo-card-body">
+                    {% if skills_found %}
+                        {% for s in skills_found[:6] %}
+                        {% set pct = 52 + (loop.index0 * 7) % 38 %}
+                        <div class="skill-bar-row mb-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>{{ s }}</span><span class="text-muted">{{ pct }}%</span>
+                            </div>
+                            <div class="progress neo-progress neo-progress--thin">
+                                <div class="progress-bar neo-progress-bar" style="width: {{ pct }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="small text-muted mb-0">Run the resume analyzer to populate skill bars.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# —— Bottom: activity, AI, courses —— #}
+    <div class="row g-4 mb-4">
+        <div class="col-lg-4">
+            <div class="neo-card h-100">
+                <div class="neo-card-header"><i class="fas fa-history me-2"></i>Recent activity</div>
+                <div class="neo-card-body activity-feed">
+                    {% for act in recent_activities %}
+                    <div class="activity-item">
+                        <div class="activity-icon"><i class="fas {{ act.icon }}"></i></div>
+                        <div>
+                            <div class="fw-semibold">{{ act.title }}</div>
+                            <div class="small text-muted">{{ act.detail }}</div>
+                            <div class="activity-time">{{ act.time }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="neo-card neo-card--ai h-100">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="ai-widget-avatar"><i class="fas fa-robot"></i></div>
+                    <div>
+                        <div class="neo-card-header border-0 p-0 mb-2">AI Assistant</div>
+                        <p class="small text-muted mb-3">{{ career_prediction[:180] }}{% if career_prediction|length > 180 %}…{% endif %}</p>
+                        <a href="{{ url_for('chatbot.chat') }}" class="btn btn-hero-cta btn-sm">Start chat</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="neo-card h-100">
+                <div class="neo-card-header">Recommended for you</div>
+                <div class="neo-card-body">
+                    {% for c in recommended_courses %}
+                    <div class="course-mini mb-3 {% if not loop.last %}pb-3 border-bottom border-secondary border-opacity-25{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <div class="fw-semibold small">{{ c.title }}</div>
+                                <div class="text-muted small">{{ c.provider }}</div>
+                            </div>
+                            <span class="badge bg-primary bg-opacity-25 text-primary">{{ c.badge }}</span>
+                        </div>
+                        <div class="small text-warning mt-1"><i class="fas fa-star me-1"></i>{{ c.rating }}</div>
+                    </div>
+                    {% endfor %}
+                    <a href="{{ url_for('certifications.certs') }}" class="btn btn-sm btn-neo-ghost w-100 mt-1">Browse certifications</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# —— Tags + next steps —— #}
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="neo-card h-100">
+                <div class="neo-card-header">Next steps</div>
+                <div class="neo-card-body">
+                    <ul class="mb-0 ps-3 small">
+                        <li class="mb-2">Refresh your resume after every major project or internship.</li>
+                        <li class="mb-2">Align keywords with your target role in <strong>Resume Analyzer</strong>.</li>
+                        <li class="mb-0">Turn skills into proof via <strong>Project Suggestions</strong> and <strong>Interview Generator</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            {% if latest %}
+            <div class="neo-card h-100">
+                <div class="neo-card-header d-flex justify-content-between align-items-center">
+                    <span>Resume keywords</span>
+                    <a class="small" href="{{ url_for('skills.recommendations') }}">Skill AI</a>
+                </div>
+                <div class="neo-card-body">
+                    {% for s in skills_found[:18] %}
+                    <span class="skill-tag skill-tag-found">{{ s }}</span>
+                    {% endfor %}
+                    {% for s in skills_missing[:10] %}
+                    <span class="skill-tag skill-tag-missing">{{ s }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="neo-card neo-card--dashed h-100 d-flex align-items-center justify-content-center p-5 text-center">
+                <div>
+                    <i class="fas fa-file-upload fa-2x text-primary mb-3 d-block"></i>
+                    <p class="text-muted mb-0">Upload a resume to see matched and missing keywords.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  initDashboardCharts(
+    {{ chart_labels|safe }},
+    {{ chart_scores|safe }},
+    {{ skill_chart_labels|safe }},
+    {{ skill_chart_data|safe }}
+  );
+  {% if latest %}
+  (function() {
+    var score = {{ ats_score|float }};
+    var circle = document.getElementById('dashAtsCircle');
+    if (!circle) return;
+    var r = parseFloat(circle.getAttribute('r'));
+    var c = 2 * Math.PI * r;
+    circle.style.strokeDasharray = c;
+    circle.style.strokeDashoffset = c;
+    requestAnimationFrame(function() {
+      circle.style.transition = 'stroke-dashoffset 1.2s ease-out';
+      circle.style.strokeDashoffset = c - (Math.min(score, 100) / 100) * c;
+    });
+  })();
+  {% endif %}
+});
+</script>
+{% endblock %}

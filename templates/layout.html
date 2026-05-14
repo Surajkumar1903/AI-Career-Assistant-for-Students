@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+{# User initials for avatar (first letters of name or username) #}
+{% set _nm = (current_user.full_name or current_user.username or 'U') %}
+{% set _parts = _nm.split() %}
+{% set user_initials = (_parts[0][0]|upper) ~ ((_parts[1][0]|upper) if _parts|length > 1 else '') %}
+
+<div class="app-wrapper">
+    <aside class="sidebar" id="sidebar">
+        <a href="{{ url_for('dashboard.home') }}" class="sidebar-brand">
+            <div class="sidebar-brand-icon sidebar-brand-icon--brain">
+                <i class="fas fa-brain"></i>
+            </div>
+            <div class="sidebar-brand-text">
+                AI Career Assistant
+                <small>For Students</small>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-title">Main</div>
+
+            <a href="{{ url_for('dashboard.home') }}" class="nav-link {% if request.endpoint == 'dashboard.home' %}active{% endif %}">
+                <i class="nav-icon fas fa-th-large"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+
+            <a href="{{ url_for('resume.analyzer') }}" class="nav-link {% if request.endpoint == 'resume.analyzer' or request.endpoint == 'resume.result' or request.endpoint == 'resume.download_report' %}active{% endif %}">
+                <i class="nav-icon fas fa-file-alt"></i>
+                <span class="nav-label">Resume Analyzer</span>
+            </a>
+
+            <a href="{{ url_for('resume.job_resume_builder') }}" class="nav-link {% if request.endpoint in ('resume.job_resume_builder', 'resume.job_resume_download_pdf', 'resume.job_resume_download_docx') %}active{% endif %}">
+                <i class="nav-icon fas fa-file-contract"></i>
+                <span class="nav-label">Job Resume Builder</span>
+            </a>
+
+            <a href="{{ url_for('career.roadmap') }}" class="nav-link {% if 'career' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-map-marked-alt"></i>
+                <span class="nav-label">Career Roadmap</span>
+            </a>
+
+            <a href="{{ url_for('skills.recommendations') }}" class="nav-link {% if request.endpoint and request.endpoint.startswith('skills.') %}active{% endif %}">
+                <i class="nav-icon fas fa-brain"></i>
+                <span class="nav-label">Skill Recommendation</span>
+            </a>
+
+            <a href="{{ url_for('interview.prep') }}" class="nav-link {% if 'interview' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-comments"></i>
+                <span class="nav-label">Interview Generator</span>
+            </a>
+
+            <div class="nav-section-title">Tools</div>
+
+            <a href="{{ url_for('linkedin.optimizer') }}" class="nav-link {% if 'linkedin' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fab fa-linkedin"></i>
+                <span class="nav-label">LinkedIn Optimizer</span>
+            </a>
+
+            <a href="{{ url_for('projects.suggestions') }}" class="nav-link {% if 'projects' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-lightbulb"></i>
+                <span class="nav-label">Project Suggestions</span>
+            </a>
+
+            <a href="{{ url_for('certifications.certs') }}" class="nav-link {% if 'certifications' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-certificate"></i>
+                <span class="nav-label">Certifications</span>
+            </a>
+
+            <a href="{{ url_for('dashboard.home') }}#dash-analytics" class="nav-link {% if false %}active{% endif %}">
+                <i class="nav-icon fas fa-chart-line"></i>
+                <span class="nav-label">Analytics</span>
+            </a>
+
+            <a href="{{ url_for('chatbot.chat') }}" class="nav-link {% if 'chatbot' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-robot"></i>
+                <span class="nav-label">AI Chatbot</span>
+            </a>
+
+            <div class="nav-section-title">Account</div>
+
+            <a href="{{ url_for('auth.profile') }}" class="nav-link {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                <i class="nav-icon fas fa-cog"></i>
+                <span class="nav-label">Settings</span>
+            </a>
+
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin.panel') }}" class="nav-link {% if 'admin' in (request.endpoint or '') %}active{% endif %}">
+                <i class="nav-icon fas fa-shield-alt"></i>
+                <span class="nav-label">Admin Panel</span>
+                <span class="nav-badge">Admin</span>
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('contact.contact') }}" class="nav-link {% if request.endpoint == 'contact.contact' %}active{% endif %}">
+                <i class="nav-icon fas fa-envelope"></i>
+                <span class="nav-label">Contact</span>
+            </a>
+
+            <a href="{{ url_for('auth.logout') }}" class="nav-link nav-link--logout">
+                <i class="nav-icon fas fa-sign-out-alt"></i>
+                <span class="nav-label">Logout</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-ai-pill">
+                <span class="sidebar-ai-dot"></span>
+                <span>AI Assistant Online</span>
+            </div>
+            <div class="sidebar-pro-card">
+                <div class="sidebar-pro-icon"><i class="fas fa-rocket"></i></div>
+                <div class="sidebar-pro-text">
+                    <strong>Upgrade to Pro</strong>
+                    <span>Advanced insights & exports</span>
+                </div>
+                <a href="{{ url_for('contact.contact') }}" class="btn btn-pro-sm">Upgrade Now</a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <button type="button" class="btn topbar-menu-btn d-lg-none" id="sidebarToggle" aria-label="Menu">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="topbar-welcome d-none d-md-block">
+                <div class="topbar-welcome-title">Welcome back, {{ current_user.full_name or current_user.username }}! <span class="wave-emoji" aria-hidden="true">👋</span></div>
+                <p class="topbar-welcome-sub mb-0">Ready to accelerate your career journey today?</p>
+            </div>
+
+            <div class="topbar-search-wrap d-none d-lg-flex">
+                <i class="fas fa-search topbar-search-icon"></i>
+                <input type="search" class="topbar-search" placeholder="Search features, skills…" autocomplete="off" id="topbarSearch" aria-label="Search">
+            </div>
+
+            <div class="topbar-actions">
+                <button type="button" class="topbar-icon-btn" title="Notifications" aria-label="Notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="topbar-notif-dot"></span>
+                </button>
+                <a href="{{ url_for('auth.toggle_theme') }}" class="topbar-icon-btn topbar-icon-btn--link" title="Toggle theme">
+                    <i class="fas fa-moon"></i>
+                </a>
+                <div class="dropdown topbar-user-dropdown">
+                    <button class="topbar-user-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="topbar-avatar">{{ user_initials }}</span>
+                        <span class="topbar-user-meta d-none d-sm-flex">
+                            <span class="topbar-user-name">{{ current_user.full_name or current_user.username }}</span>
+                            <span class="topbar-user-role">Student</span>
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end neo-dropdown">
+                        <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('dashboard.home') }}"><i class="fas fa-th-large me-2"></i>Dashboard</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </header>
+
+        <div class="page-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block page_content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<script>
+document.getElementById('sidebarToggle')?.addEventListener('click', function() {
+    document.getElementById('sidebar').classList.toggle('mobile-open');
+});
+// Light filter: hide sidebar nav items that don't match search (cosmetic)
+(function() {
+    var input = document.getElementById('topbarSearch');
+    if (!input) return;
+    input.addEventListener('input', function() {
+        var q = (input.value || '').toLowerCase().trim();
+        document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+            if (!q) { link.style.display = ''; return; }
+            var t = (link.textContent || '').toLowerCase();
+            link.style.display = t.indexOf(q) >= 0 ? '' : 'none';
+        });
+    });
+})();
+</script>
+{% endblock %}

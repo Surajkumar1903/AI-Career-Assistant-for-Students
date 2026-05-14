@@ -1,0 +1,26 @@
+JANE DOE
+jane.doe.student@email.com | +1 (555) 010-2030 | github.com/janedoe | linkedin.com/in/janedoe
+
+EDUCATION
+B.Tech Computer Science — State Institute of Technology (2023–2027)
+Relevant coursework: Data Structures, Operating Systems, Probability, Databases
+
+EXPERIENCE
+Campus Tech Club — Web Lead (2024–Present)
+- Built the club website using HTML, CSS, JavaScript, and Bootstrap
+- Deployed a Flask API for event registrations with SQLite
+
+Summer Intern — Local SaaS Startup (June–Aug 2025)
+- Automated reporting with Python, Pandas, and SQL
+- Improved dashboard load time by refactoring queries
+
+PROJECTS
+AI Resume Keyword Assistant — Python, scikit-learn, NLTK
+- TF–IDF similarity between resumes and job descriptions
+
+CERTIFICATIONS
+Google Data Analytics Professional Certificate (Coursera) — in progress
+AWS Cloud Practitioner — planned
+
+SKILLS
+Python, JavaScript, HTML, CSS, Git, SQL, Flask, Machine Learning, Communication, Teamwork

@@ -1,0 +1,80 @@
+{% extends "layout.html" %}
+{% block title %}Interview Prep — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4 d-flex flex-wrap justify-content-between gap-3 align-items-start">
+    <div>
+        <h1 class="h3 fw-bold mb-1">Interview Question Generator</h1>
+        <p class="text-muted mb-0">HR, technical, Python, AI/ML, web development, DSA, databases, and system design.</p>
+    </div>
+    <input class="form-control" style="max-width: 280px;" id="questionSearch" placeholder="Search questions…">
+</div>
+
+<div class="card mb-4 animate-on-scroll">
+    <div class="card-header"><i class="fas fa-filter me-2 text-primary"></i>Filters</div>
+    <div class="card-body">
+        <form method="POST" class="row g-3" onsubmit="if(window.Loader){Loader.show('Generating questions…');}">
+            <div class="col-md-4">
+                <label class="form-label">Category</label>
+                <select class="form-select" name="category">
+                    {% for key, label in categories.items() %}
+                    <option value="{{ key }}" {% if key == selected_category %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Difficulty</label>
+                <select class="form-select" name="level">
+                    {% for lvl in ['beginner','intermediate','advanced'] %}
+                    <option value="{{ lvl }}" {% if lvl == selected_level %}selected{% endif %}>{{ lvl|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Role / focus (optional)</label>
+                <input class="form-control" name="role" value="{{ selected_role }}" placeholder="e.g., Backend intern">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Count</label>
+                <input class="form-control" type="number" name="count" min="3" max="30" value="{{ request.form.get('count','10') }}">
+            </div>
+            <div class="col-12">
+                <button class="btn btn-primary" type="submit"><i class="fas fa-bolt me-2"></i>Generate</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if questions %}
+<div class="card animate-on-scroll">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-list me-2 text-primary"></i>Questions</span>
+        <span class="badge bg-primary">{{ questions|length }} items</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for q in questions %}
+            <div class="col-12 filter-question-item">
+                <div class="card border-secondary border-opacity-25">
+                    <div class="card-body d-flex gap-3">
+                        <div class="text-primary fw-bold">{{ loop.index }}.</div>
+                        <div class="flex-grow-1">{{ q }}</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                onclick="copyToClipboard({{ q|tojson }}, this)">Copy</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">Choose filters and click <strong>Generate</strong> to create a fresh question set.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => initSearch('questionSearch', 'filter-question-item'));
+</script>
+{% endblock %}

@@ -1,0 +1,176 @@
+{% extends "layout.html" %}
+{% block title %}Job-Based AI Resume Builder — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Job-Based AI Resume Builder</h1>
+    <p class="text-muted mb-0">
+        Paste a real job description, pick the role, and upload <strong>your</strong> resume.
+        We match JD keywords to your content, estimate an ATS-style score, and rebuild sections using only what you already provided—gaps go under <em>Recommended Skills to Learn</em>, not as fake skills.
+    </p>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="card animate-on-scroll">
+            <div class="card-header">
+                <i class="fas fa-briefcase me-2 text-primary"></i>Inputs
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data"
+                      onsubmit="if(window.Loader){Loader.show('Matching job to resume and generating…');}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="job_role">Job role</label>
+                        <select class="form-select" id="job_role" name="job_role" required>
+                            <option value="" disabled {% if not bundle %}selected{% endif %}>Select role…</option>
+                            {% for r in job_roles %}
+                            <option value="{{ r.value }}" {% if bundle and bundle.job_role == r.value %}selected{% endif %}>{{ r.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="job_description">Job description</label>
+                        <textarea class="form-control font-monospace" id="job_description" name="job_description" rows="12"
+                                  required minlength="40" placeholder="Paste the full job description here (responsibilities, requirements, tech stack)…">{{ request.form.get('job_description') or (bundle.get('job_description_snippet', '') if bundle else '') }}</textarea>
+                        <div class="form-text">Minimum ~40 characters. More detail = better keyword matching.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Your current resume</label>
+                        <div class="upload-zone py-4" id="jrUploadZone">
+                            <div class="upload-icon text-primary"><i class="fas fa-file-upload"></i></div>
+                            <p class="mb-2 small text-muted">PDF or Word (max 16MB)</p>
+                            <input type="file" name="resume" id="jrResumeFile" class="d-none" accept=".pdf,.doc,.docx" required>
+                            <span class="btn btn-outline-primary btn-sm">Choose file</span>
+                        </div>
+                        <div id="jrFileName" class="small text-muted mt-2 d-none"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-magic me-2"></i>Generate tailored resume
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        {% if bundle %}
+        {% set m = bundle.match %}
+        {% set sec = bundle.sections %}
+        <div class="card mb-4 border-primary border-opacity-25 animate-on-scroll">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="fas fa-chart-pie me-2 text-primary"></i>JD match &amp; ATS-style score</span>
+                {% if bundle.used_ai %}
+                <span class="badge bg-success">AI rewrite (Gemini)</span>
+                {% else %}
+                <span class="badge bg-secondary">Local template</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row g-3 align-items-center mb-3">
+                    <div class="col-sm-4 text-center">
+                        <div class="display-5 fw-bold text-primary">{{ m.ats_match_score }}</div>
+                        <div class="small text-muted">Match score (0–100)</div>
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="small text-muted mb-1">Experience relevance</div>
+                        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width: {{ m.experience_relevance }}%"></div></div>
+                        <div class="small text-muted mb-1">Project relevance</div>
+                        <div class="progress" style="height:8px;"><div class="progress-bar bg-info" style="width: {{ m.project_relevance }}%"></div></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-semibold mb-2">Missing / low-coverage keywords (from JD vs resume)</h6>
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    {% for kw in m.missing_keywords[:20] %}
+                    <span class="badge rounded-pill text-bg-warning text-dark">{{ kw }}</span>
+                    {% else %}
+                    <span class="text-muted small">No major gaps detected in keyword scan—still review manually.</span>
+                    {% endfor %}
+                </div>
+
+                <div class="row g-2 small">
+                    <div class="col-md-6">
+                        <div class="fw-semibold text-success mb-1">JD skills found in your resume</div>
+                        <ul class="mb-0 ps-3">
+                            {% for s in m.skills_matched_in_resume[:12] %}<li>{{ s }}</li>{% else %}<li class="text-muted">—</li>{% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fw-semibold text-danger mb-1">JD skills not evidenced in resume</div>
+                        <ul class="mb-0 ps-3">
+                            {% for s in m.skills_missing_from_resume[:12] %}<li>{{ s }}</li>{% else %}<li class="text-muted">—</li>{% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a class="btn btn-danger" href="{{ url_for('resume.job_resume_download_pdf') }}">
+                        <i class="fas fa-file-pdf me-1"></i>Download PDF
+                    </a>
+                    <a class="btn btn-outline-primary" href="{{ url_for('resume.job_resume_download_docx') }}">
+                        <i class="fas fa-file-word me-1"></i>Download DOCX
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card animate-on-scroll">
+            <div class="card-header"><i class="fas fa-file-alt me-2 text-primary"></i>Generated resume preview</div>
+            <div class="card-body small" style="max-height: 70vh; overflow-y: auto;">
+                {% for title, key in [
+                    ('Professional Summary', 'professional_summary'),
+                    ('Professional Experience', 'experience'),
+                    ('Projects', 'projects'),
+                    ('Technical Skills', 'skills'),
+                    ('Education', 'education'),
+                    ('Certifications', 'certifications'),
+                    ('Achievements', 'achievements'),
+                ] %}
+                <h6 class="text-primary fw-bold mt-3 mb-2">{{ title }}</h6>
+                <div class="border rounded p-3 bg-body-tertiary mb-2" style="white-space: pre-wrap;">{{ sec.get(key, '') }}</div>
+                {% endfor %}
+
+                <h6 class="text-warning fw-bold mt-3 mb-2">Recommended Skills to Learn</h6>
+                <p class="text-muted small">These are gaps vs the job description—not added to your skills section as credentials.</p>
+                <ul class="mb-0">
+                    {% for s in sec.get('recommended_skills_to_learn', []) %}
+                    <li>{{ s }}</li>
+                    {% else %}
+                    <li class="text-muted">None flagged beyond your current profile.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 bg-body-secondary animate-on-scroll">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-wand-magic-sparkles fa-3x text-primary opacity-50 mb-3"></i>
+                <p class="text-muted mb-0">Fill the form and generate to see match score, missing keywords, and your tailored sections here.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    var zone = document.getElementById('jrUploadZone');
+    var inp = document.getElementById('jrResumeFile');
+    var nameEl = document.getElementById('jrFileName');
+    if (!zone || !inp) return;
+    zone.addEventListener('click', function(e) {
+        if (e.target.closest('input')) return;
+        inp.click();
+    });
+    inp.addEventListener('change', function() {
+        if (inp.files && inp.files[0]) {
+            nameEl.textContent = inp.files[0].name;
+            nameEl.classList.remove('d-none');
+        }
+    });
+})();
+</script>
+{% endblock %}

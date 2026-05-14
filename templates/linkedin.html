@@ -1,0 +1,101 @@
+{% extends "layout.html" %}
+{% block title %}LinkedIn Optimizer — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">LinkedIn Optimizer</h1>
+    <p class="text-muted mb-0">Generate a headline, about section, skills list, post ideas, and a short professional bio.</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card animate-on-scroll">
+            <div class="card-header"><i class="fab fa-linkedin me-2 text-primary"></i>Your inputs</div>
+            <div class="card-body">
+                <form method="POST" onsubmit="if(window.Loader){Loader.show('Generating LinkedIn content…');}">
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input class="form-control" name="name" value="{{ request.form.get('name', current_user.full_name or current_user.username) }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target role</label>
+                        <input class="form-control" name="role" value="{{ request.form.get('role','') }}" placeholder="Aspiring Full-Stack Developer">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Skills (comma-separated)</label>
+                        <input class="form-control" name="skills" value="{{ request.form.get('skills','') }}" placeholder="Python, React, SQL">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Experience highlights</label>
+                        <textarea class="form-control" rows="3" name="experience" placeholder="Internships, freelance, campus clubs…">{{ request.form.get('experience','') }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Achievements</label>
+                        <textarea class="form-control" rows="2" name="achievements" placeholder="Hackathons, GPA, publications…">{{ request.form.get('achievements','') }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Education</label>
+                        <textarea class="form-control" rows="2" name="education" placeholder="Degree, school, graduation">{{ request.form.get('education','') }}</textarea>
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit"><i class="fas fa-wand-magic-sparkles me-2"></i>Generate</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        {% if content %}
+        <div class="card mb-4 animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-heading me-2 text-primary"></i>Headline</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ content.headline|tojson }}, this)">Copy</button>
+            </div>
+            <div class="card-body fw-semibold">{{ content.headline }}</div>
+        </div>
+
+        <div class="card mb-4 animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user me-2 text-primary"></i>About</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ content.about|tojson }}, this)">Copy</button>
+            </div>
+            <div class="card-body"><pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ content.about }}</pre></div>
+        </div>
+
+        <div class="card mb-4 animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-tags me-2 text-primary"></i>Skills section (copy-ready)</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ content.skills_section|tojson }}, this)">Copy</button>
+            </div>
+            <div class="card-body">
+                <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ content.skills_section }}</pre>
+            </div>
+        </div>
+
+        <div class="card mb-4 animate-on-scroll">
+            <div class="card-header"><i class="fas fa-pen-nib me-2 text-primary"></i>Post captions</div>
+            <div class="card-body">
+                {% for p in content.post_captions %}
+                <div class="mb-3 p-3 rounded border border-secondary border-opacity-25">
+                    <div class="small text-muted mb-2">Idea {{ loop.index }}</div>
+                    <div class="mb-2">{{ p }}</div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ p|tojson }}, this)">Copy</button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card animate-on-scroll">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-id-badge me-2 text-primary"></i>Professional bio (short)</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard({{ content.bio|tojson }}, this)">Copy</button>
+            </div>
+            <div class="card-body">{{ content.bio }}</div>
+        </div>
+        {% else %}
+        <div class="card animate-on-scroll">
+            <div class="card-body text-muted">Fill the form and generate — content will appear here.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
