@@ -80,7 +80,14 @@ def _fallback_resume(parsed: dict, job_role: str, match: dict, user) -> dict[str
     }
 
 
-def _gemini_tailored_resume(parsed: dict, jd_text: str, job_role: str, user, match: dict) -> dict[str, Any] | None:
+def _gemini_tailored_resume(
+    parsed: dict,
+    jd_text: str,
+    job_role: str,
+    user,
+    match: dict,
+    style_profile: dict | None = None,
+) -> dict[str, Any] | None:
     api_key = os.getenv("GEMINI_API_KEY", "").strip()
     if not api_key or "your-gemini" in api_key.lower():
         return None
@@ -121,6 +128,22 @@ Resume data (source of truth):
 Match hints (for tone, do not contradict): ATS-style score factors already computed: missing JD skills include {match.get('skills_missing_from_resume', [])[:20]}.
 """
 
+    if style_profile:
+        sp = json.dumps(
+            {
+                "name_pt": style_profile.get("name_pt"),
+                "contact_pt": style_profile.get("contact_pt"),
+                "section_pt": style_profile.get("section_pt"),
+                "body_pt": style_profile.get("body_pt"),
+                "source": style_profile.get("source"),
+            },
+            ensure_ascii=False,
+        )
+        prompt += (
+            f"\n\nREFERENCE PDF TYPOGRAPHY (approximate, keep output similarly dense for one page when possible): {sp}\n"
+            "Use concise bullets; prioritize job-relevant phrasing in Projects and Technical Skills ordering without adding new credentials.\n"
+        )
+
     try:
         import google.generativeai as genai
 
@@ -149,12 +172,18 @@ Match hints (for tone, do not contradict): ATS-style score factors already compu
         return None
 
 
-def generate_tailored_resume_bundle(parsed: dict, jd_text: str, job_role: str, user) -> dict[str, Any]:
+def generate_tailored_resume_bundle(
+    parsed: dict,
+    jd_text: str,
+    job_role: str,
+    user,
+    style_profile: dict | None = None,
+) -> dict[str, Any]:
     """
     Returns dict with keys: sections (dict), match (dict), job_role, used_ai (bool)
     """
     match = compute_job_match(parsed, jd_text)
-    ai_sections = _gemini_tailored_resume(parsed, jd_text, job_role, user, match)
+    ai_sections = _gemini_tailored_resume(parsed, jd_text, job_role, user, match, style_profile)
     used_ai = ai_sections is not None
     sections = ai_sections if used_ai else _fallback_resume(parsed, job_role, match, user)
 

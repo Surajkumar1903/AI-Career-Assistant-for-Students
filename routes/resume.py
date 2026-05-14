@@ -30,6 +30,8 @@ from utils.ats_scorer import calculate_ats_score
 from utils.pdf_report import generate_pdf_report
 from utils.job_resume_ai import generate_tailored_resume_bundle
 from utils.job_resume_export import build_job_resume_pdf, build_job_resume_docx
+from utils.job_resume_match import compute_job_match, compute_match_on_generated_text
+from utils.pdf_style_extract import extract_style_profile, merge_with_default_reference
 
 resume_bp = Blueprint('resume', __name__)
 
@@ -42,6 +44,7 @@ JOB_RESUME_ROLES = [
 ]
 
 JOB_RESUME_BUILD_SUBDIR = 'job_resume_builds'
+AUTO_RESUME_BUILD_SUBDIR = 'auto_resume_builds'
 
 
 def allowed_file(filename):
@@ -49,14 +52,14 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
 
-def _job_resume_bundle_path(token: str) -> str:
-    base = os.path.join(current_app.config['UPLOAD_FOLDER'], JOB_RESUME_BUILD_SUBDIR)
+def _builder_bundle_path(token: str, subdir: str) -> str:
+    base = os.path.join(current_app.config['UPLOAD_FOLDER'], subdir)
     return os.path.join(base, f'{token}.json')
 
 
-def _save_job_resume_bundle(user_id: int, bundle: dict) -> str:
+def _save_builder_bundle(user_id: int, bundle: dict, subdir: str) -> str:
     token = secrets.token_hex(16)
-    base = os.path.join(current_app.config['UPLOAD_FOLDER'], JOB_RESUME_BUILD_SUBDIR)
+    base = os.path.join(current_app.config['UPLOAD_FOLDER'], subdir)
     os.makedirs(base, exist_ok=True)
     path = os.path.join(base, f'{token}.json')
     out = {
@@ -70,15 +73,18 @@ def _save_job_resume_bundle(user_id: int, bundle: dict) -> str:
         'resume_contact': bundle.get('resume_contact') or {},
         'resume_raw_excerpt': bundle.get('resume_raw_excerpt') or '',
     }
+    for k in ('style_profile', 'ats_before', 'ats_after', 'generator'):
+        if k in bundle:
+            out[k] = bundle[k]
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, default=str)
     return token
 
 
-def _load_job_resume_bundle(token: str, user_id: int) -> dict | None:
+def _load_builder_bundle(token: str, user_id: int, subdir: str) -> dict | None:
     if not token:
         return None
-    path = _job_resume_bundle_path(token)
+    path = _builder_bundle_path(token, subdir)
     if not os.path.isfile(path):
         return None
     with open(path, encoding='utf-8') as f:
@@ -86,6 +92,20 @@ def _load_job_resume_bundle(token: str, user_id: int) -> dict | None:
     if int(data.get('user_id', -1)) != int(user_id):
         return None
     return data
+
+
+def _save_job_resume_bundle(user_id: int, bundle: dict) -> str:
+    return _save_builder_bundle(user_id, bundle, JOB_RESUME_BUILD_SUBDIR)
+
+
+def _load_job_resume_bundle(token: str, user_id: int) -> dict | None:
+    return _load_builder_bundle(token, user_id, JOB_RESUME_BUILD_SUBDIR)
+
+
+def _reference_resume_format_pdf_path() -> str:
+    """Optional packaged reference PDF for typography fallback."""
+    root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    return os.path.join(root, 'static', 'reference', 'resume_format_reference.pdf')
 
 
 def _slug_role(name: str) -> str:
@@ -328,3 +348,135 @@ def job_resume_download_docx():
     out_path = os.path.join(reports_dir, fn)
     build_job_resume_docx(data, current_user, out_path)
     return send_from_directory(reports_dir, fn, as_attachment=True, download_name=f'Tailored_Resume_{slug}.docx')
+
+
+@resume_bp.route('/auto-resume-pdf-format', methods=['GET', 'POST'])
+@login_required
+def auto_resume_pdf_format():
+    """
+    Auto Resume Generator: clone typography from uploaded PDF, optimize content to JD,
+    ATS before/after, PDF + DOCX download.
+    """
+    bundle = None
+    token = session.get('auto_resume_token')
+    if token:
+        bundle = _load_builder_bundle(token, current_user.id, AUTO_RESUME_BUILD_SUBDIR)
+        if not bundle:
+            session.pop('auto_resume_token', None)
+
+    if request.method == 'POST':
+        job_role = (request.form.get('job_role') or '').strip()
+        jd_text = (request.form.get('job_description') or '').strip()
+        allowed = {r['value'] for r in JOB_RESUME_ROLES}
+        if job_role not in allowed:
+            flash('Please select a valid job role.', 'danger')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        if len(jd_text) < 40:
+            flash('Please paste a fuller job description.', 'warning')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        if 'resume' not in request.files:
+            flash('No resume file selected.', 'danger')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        file = request.files['resume']
+        if not file.filename:
+            flash('No resume file selected.', 'danger')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        if not allowed_file(file.filename):
+            flash('Only PDF, DOC, or DOCX files are allowed.', 'danger')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        if not file.filename.lower().endswith('.pdf'):
+            flash('This tool requires a PDF so we can read layout and fonts. Use Job Resume Builder for DOCX.', 'warning')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+
+        original_name = secure_filename(file.filename)
+        unique_name = f"{uuid.uuid4().hex}_{original_name}"
+        save_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_name)
+        file.save(save_path)
+        try:
+            parsed = parse_resume(save_path)
+            if not (parsed.get('raw_text') or '').strip():
+                flash('Could not read text from that PDF.', 'danger')
+                return redirect(url_for('resume.auto_resume_pdf_format'))
+
+            m_before = compute_job_match(parsed, jd_text)
+            ats_before = int(m_before.get('ats_match_score', 0))
+
+            style_profile = extract_style_profile(save_path)
+            ref_path = _reference_resume_format_pdf_path()
+            style_profile = merge_with_default_reference(
+                style_profile, ref_path if os.path.isfile(ref_path) else None
+            )
+
+            gen_bundle = generate_tailored_resume_bundle(
+                parsed, jd_text, job_role, current_user, style_profile=style_profile
+            )
+            gen_bundle['job_description_snippet'] = jd_text[:8000]
+            gen_bundle['resume_contact'] = parsed.get('contact') or {}
+            gen_bundle['resume_raw_excerpt'] = (parsed.get('raw_text') or '')[:6000]
+            gen_bundle['generator'] = 'auto_pdf_format'
+            gen_bundle['style_profile'] = style_profile
+            gen_bundle['ats_before'] = ats_before
+            gen_bundle['match'] = m_before
+            m_after = compute_match_on_generated_text(parsed, gen_bundle['sections'], jd_text)
+            gen_bundle['ats_after'] = int(m_after.get('ats_match_score', 0))
+
+            new_token = _save_builder_bundle(current_user.id, gen_bundle, AUTO_RESUME_BUILD_SUBDIR)
+            session['auto_resume_token'] = new_token
+
+            if gen_bundle.get('used_ai'):
+                flash('Optimized CV generated (same style family as your PDF). Review before sending.', 'success')
+            else:
+                flash('CV generated locally. Add GEMINI_API_KEY for stronger job-specific wording.', 'info')
+        except Exception:
+            current_app.logger.exception('auto_resume_pdf_format')
+            flash('Could not process that PDF.', 'danger')
+            return redirect(url_for('resume.auto_resume_pdf_format'))
+        finally:
+            try:
+                os.remove(save_path)
+            except OSError:
+                pass
+
+        return redirect(url_for('resume.auto_resume_pdf_format'))
+
+    return render_template(
+        'auto_resume_generator.html',
+        job_roles=JOB_RESUME_ROLES,
+        bundle=bundle,
+    )
+
+
+@resume_bp.route('/auto-resume-pdf-format/download/pdf')
+@login_required
+def auto_resume_download_pdf():
+    token = session.get('auto_resume_token')
+    data = _load_builder_bundle(token, current_user.id, AUTO_RESUME_BUILD_SUBDIR) if token else None
+    if not data:
+        flash('Generate a resume first.', 'warning')
+        return redirect(url_for('resume.auto_resume_pdf_format'))
+
+    reports_dir = os.path.join(current_app.root_path, 'static', 'reports')
+    os.makedirs(reports_dir, exist_ok=True)
+    slug = _slug_role(data.get('job_role', 'resume'))
+    fn = f"auto_resume_{current_user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.pdf"
+    out_path = os.path.join(reports_dir, fn)
+    build_job_resume_pdf(data, current_user, out_path)
+    return send_from_directory(reports_dir, fn, as_attachment=True, download_name=f'Auto_Resume_{slug}.pdf')
+
+
+@resume_bp.route('/auto-resume-pdf-format/download/docx')
+@login_required
+def auto_resume_download_docx():
+    token = session.get('auto_resume_token')
+    data = _load_builder_bundle(token, current_user.id, AUTO_RESUME_BUILD_SUBDIR) if token else None
+    if not data:
+        flash('Generate a resume first.', 'warning')
+        return redirect(url_for('resume.auto_resume_pdf_format'))
+
+    reports_dir = os.path.join(current_app.root_path, 'static', 'reports')
+    os.makedirs(reports_dir, exist_ok=True)
+    slug = _slug_role(data.get('job_role', 'resume'))
+    fn = f"auto_resume_{current_user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.docx"
+    out_path = os.path.join(reports_dir, fn)
+    build_job_resume_docx(data, current_user, out_path)
+    return send_from_directory(reports_dir, fn, as_attachment=True, download_name=f'Auto_Resume_{slug}.docx')

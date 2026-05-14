@@ -18,7 +18,7 @@ INTENTS = {
     'resume': {
         'patterns': [r'\bresume\b', r'\bcv\b', r'\bats\b', r'\bapplicant tracking\b'],
         'responses': [
-            "📄 For resume help, use **Resume Analyzer** or **Job-Based AI Resume Builder** (tailor to a real job description). Upload your PDF and we:\n"
+            "📄 For resume help, use **Resume Analyzer**, **Job-Based AI Resume Builder**, or **Auto Resume (PDF style)** (clone your PDF’s typography + JD optimization). Upload your PDF and we:\n"
             "• Calculate your ATS score\n• Identify missing skills\n• Suggest improvements\n\n"
             "A good ATS score is 70+. Want tips on improving yours?",
             "Your resume is your first impression! Key tips:\n"

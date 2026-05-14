@@ -36,6 +36,11 @@
                 <span class="nav-label">Job Resume Builder</span>
             </a>
 
+            <a href="{{ url_for('resume.auto_resume_pdf_format') }}" class="nav-link {% if request.endpoint in ('resume.auto_resume_pdf_format', 'resume.auto_resume_download_pdf', 'resume.auto_resume_download_docx') %}active{% endif %}">
+                <i class="nav-icon fas fa-clone"></i>
+                <span class="nav-label">Auto Resume (PDF style)</span>
+            </a>
+
             <a href="{{ url_for('career.roadmap') }}" class="nav-link {% if 'career' in (request.endpoint or '') %}active{% endif %}">
                 <i class="nav-icon fas fa-map-marked-alt"></i>
                 <span class="nav-label">Career Roadmap</span>

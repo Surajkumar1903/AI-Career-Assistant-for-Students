@@ -1,0 +1,182 @@
+{% extends "layout.html" %}
+{% block title %}Auto Resume Generator (PDF format) — AI Career Assistant{% endblock %}
+
+{% block page_content %}
+<div class="mb-4">
+    <h1 class="h3 fw-bold mb-1">Auto Resume Generator — same PDF style</h1>
+    <p class="text-muted mb-0">
+        Upload <strong>your own resume as a PDF</strong>. We read the first page’s font sizes and spacing (pdfplumber),
+        match the job description to your real content, then rebuild a <strong>one-page style CV</strong> in the same section order
+        (name &amp; contact, summary, experience, projects, skills, education, certifications, achievements).
+        <strong>No fake skills or employers</strong> — gaps appear only under <em>Recommended Skills to Learn</em>.
+        <a href="{{ url_for('resume.job_resume_builder') }}">Job Resume Builder</a> accepts DOCX as well.
+    </p>
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <div class="card animate-on-scroll">
+            <div class="card-header">
+                <i class="fas fa-file-pdf me-2 text-danger"></i>Inputs (PDF required)
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data"
+                      onsubmit="if(window.Loader){Loader.show('Analyzing PDF layout and generating CV…');}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="job_role">Job role</label>
+                        <select class="form-select" id="job_role" name="job_role" required>
+                            <option value="" disabled {% if not bundle %}selected{% endif %}>Select role…</option>
+                            {% for r in job_roles %}
+                            <option value="{{ r.value }}" {% if bundle and bundle.job_role == r.value %}selected{% endif %}>{{ r.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="job_description">Job description</label>
+                        <textarea class="form-control font-monospace" id="job_description" name="job_description" rows="12"
+                                  required minlength="40" placeholder="Paste the full job description…">{{ request.form.get('job_description') or (bundle.get('job_description_snippet', '') if bundle else '') }}</textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Your resume PDF (layout + content source)</label>
+                        <div class="upload-zone py-4" id="arUploadZone">
+                            <div class="upload-icon text-danger"><i class="fas fa-file-pdf"></i></div>
+                            <p class="mb-2 small text-muted">PDF only — max 16MB</p>
+                            <input type="file" name="resume" id="arResumeFile" class="d-none" accept=".pdf,application/pdf" required>
+                            <span class="btn btn-outline-danger btn-sm">Choose PDF</span>
+                        </div>
+                        <div id="arFileName" class="small text-muted mt-2 d-none"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-wand-magic-sparkles me-2"></i>Generate CV (same style family)
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-7">
+        {% if bundle %}
+        {% set m = bundle.match %}
+        {% set sec = bundle.sections %}
+        <div class="card mb-4 border-danger border-opacity-25 animate-on-scroll">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <span><i class="fas fa-chart-line me-2 text-danger"></i>ATS-style score — before vs after optimization</span>
+                {% if bundle.used_ai %}
+                <span class="badge bg-success">AI rewrite (Gemini)</span>
+                {% else %}
+                <span class="badge bg-secondary">Local template</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row g-3 text-center mb-3">
+                    <div class="col-4">
+                        <div class="h2 fw-bold text-secondary mb-0">{{ bundle.ats_before }}</div>
+                        <div class="small text-muted">Before (original text)</div>
+                    </div>
+                    <div class="col-4 d-flex align-items-center justify-content-center">
+                        <i class="fas fa-arrow-right text-muted fa-lg"></i>
+                    </div>
+                    <div class="col-4">
+                        <div class="h2 fw-bold text-danger mb-0">{{ bundle.ats_after }}</div>
+                        <div class="small text-muted">After (generated CV text)</div>
+                    </div>
+                </div>
+                <p class="small text-muted mb-3">Scores are heuristic keyword/JD alignment estimates, not a guarantee from any employer ATS.</p>
+
+                <div class="row g-3 align-items-center mb-3">
+                    <div class="col-sm-4 text-center">
+                        <div class="display-6 fw-bold text-primary">{{ m.ats_match_score }}</div>
+                        <div class="small text-muted">Original JD gap score</div>
+                    </div>
+                    <div class="col-sm-8">
+                        <div class="small text-muted mb-1">Experience relevance (original)</div>
+                        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width: {{ m.experience_relevance }}%"></div></div>
+                        <div class="small text-muted mb-1">Project relevance (original)</div>
+                        <div class="progress" style="height:8px;"><div class="progress-bar bg-info" style="width: {{ m.project_relevance }}%"></div></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-semibold mb-2">Missing keywords (JD vs your original resume)</h6>
+                <div class="d-flex flex-wrap gap-1 mb-3">
+                    {% for kw in m.missing_keywords[:22] %}
+                    <span class="badge rounded-pill text-bg-warning text-dark">{{ kw }}</span>
+                    {% else %}
+                    <span class="text-muted small">—</span>
+                    {% endfor %}
+                </div>
+
+                {% if bundle.style_profile %}
+                <h6 class="fw-semibold mb-2">Detected PDF typography (applied to export)</h6>
+                <pre class="small bg-body-secondary border rounded p-2 mb-3 mb-0" style="max-height:120px;overflow:auto;">{{ bundle.style_profile | tojson(indent=2) }}</pre>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a class="btn btn-danger" href="{{ url_for('resume.auto_resume_download_pdf') }}">
+                        <i class="fas fa-file-pdf me-1"></i>Download PDF
+                    </a>
+                    <a class="btn btn-outline-primary" href="{{ url_for('resume.auto_resume_download_docx') }}">
+                        <i class="fas fa-file-word me-1"></i>Download DOCX
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card animate-on-scroll">
+            <div class="card-header"><i class="fas fa-eye me-2 text-primary"></i>Auto-generated resume preview</div>
+            <div class="card-body small" style="max-height: 70vh; overflow-y: auto;">
+                {% for title, key in [
+                    ('Professional Summary', 'professional_summary'),
+                    ('Professional Experience', 'experience'),
+                    ('Projects', 'projects'),
+                    ('Technical Skills', 'skills'),
+                    ('Education', 'education'),
+                    ('Certifications', 'certifications'),
+                    ('Achievements', 'achievements'),
+                ] %}
+                <h6 class="text-danger fw-bold mt-3 mb-2">{{ title }}</h6>
+                <div class="border rounded p-3 bg-body-tertiary mb-2" style="white-space: pre-wrap;">{{ sec.get(key, '') }}</div>
+                {% endfor %}
+
+                <h6 class="text-warning fw-bold mt-3 mb-2">Recommended Skills to Learn</h6>
+                <ul class="mb-0">
+                    {% for s in sec.get('recommended_skills_to_learn', []) %}
+                    <li>{{ s }}</li>
+                    {% else %}
+                    <li class="text-muted">—</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 bg-body-secondary animate-on-scroll">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-file-pdf fa-3x text-danger opacity-50 mb-3"></i>
+                <p class="text-muted mb-0">Upload your PDF and generate to see before/after ATS estimates, layout metrics, and preview.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function() {
+    var zone = document.getElementById('arUploadZone');
+    var inp = document.getElementById('arResumeFile');
+    var nameEl = document.getElementById('arFileName');
+    if (!zone || !inp) return;
+    zone.addEventListener('click', function(e) {
+        if (e.target.closest('input')) return;
+        inp.click();
+    });
+    inp.addEventListener('change', function() {
+        if (inp.files && inp.files[0]) {
+            nameEl.textContent = inp.files[0].name;
+            nameEl.classList.remove('d-none');
+        }
+    });
+})();
+</script>
+{% endblock %}

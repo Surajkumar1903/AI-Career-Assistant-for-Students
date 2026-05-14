@@ -143,3 +143,31 @@ def compute_job_match(parsed: dict, jd_text: str) -> dict[str, Any]:
         "project_relevance": project_relevance,
         "matched_jd_skills": matched_jd_skills,
     }
+
+
+def combined_sections_text(sections: dict) -> str:
+    keys = [
+        "professional_summary",
+        "skills",
+        "projects",
+        "experience",
+        "education",
+        "certifications",
+        "achievements",
+    ]
+    return "\n".join(str(sections.get(k) or "") for k in keys)
+
+
+def compute_match_on_generated_text(original_parsed: dict, sections: dict, jd_text: str) -> dict:
+    """JD alignment using optimized resume text (keywords reflected in output)."""
+    from utils.resume_parser import extract_skills
+
+    combined = combined_sections_text(sections)
+    fake = dict(original_parsed)
+    fake["raw_text"] = combined[:25000]
+    fake["skills"] = list(dict.fromkeys((original_parsed.get("skills") or []) + extract_skills(combined)))
+    if (not fake.get("experience") or not str(fake.get("experience", "")).strip()) and sections.get("experience"):
+        fake["experience"] = str(sections.get("experience"))[:4000]
+    if (not fake.get("education") or not str(fake.get("education", "")).strip()) and sections.get("education"):
+        fake["education"] = str(sections.get("education"))[:3000]
+    return compute_job_match(fake, jd_text)

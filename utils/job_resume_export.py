@@ -95,6 +95,19 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
     match = bundle.get("match") or {}
     ats = int(match.get("ats_match_score", 0) or 0)
 
+    sp = bundle.get("style_profile") or {}
+    name_pt = float(sp.get("name_pt", 20))
+    contact_pt = float(sp.get("contact_pt", 9))
+    section_pt = float(sp.get("section_pt", 11))
+    body_pt = float(sp.get("body_pt", 10))
+    m_cm = float(sp.get("margins_cm", 1.45))
+    line_lead = float(sp.get("line_leading", body_pt * 1.35))
+
+    total_chars = sum(len(str(sections.get(k, "") or "")) for k in sections)
+    if sp.get("one_page_compact") and total_chars > 7200:
+        body_pt = max(8.5, round(body_pt * 0.92, 1))
+        line_lead = round(body_pt * 1.32, 1)
+
     BLACK = colors.black
     GRAY = colors.HexColor("#333333")
     RULE = colors.HexColor("#000000")
@@ -102,48 +115,48 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
     doc = SimpleDocTemplate(
         output_path,
         pagesize=A4,
-        rightMargin=1.5 * cm,
-        leftMargin=1.5 * cm,
-        topMargin=1.2 * cm,
-        bottomMargin=1.2 * cm,
+        rightMargin=m_cm * cm,
+        leftMargin=m_cm * cm,
+        topMargin=max(1.0, m_cm * 0.85) * cm,
+        bottomMargin=max(1.0, m_cm * 0.85) * cm,
     )
 
     name_style = ParagraphStyle(
         "CVName",
         fontName="Helvetica-Bold",
-        fontSize=20,
+        fontSize=name_pt,
         alignment=TA_CENTER,
         textColor=BLACK,
         spaceAfter=6,
-        leading=24,
+        leading=name_pt * 1.15,
     )
     contact_style = ParagraphStyle(
         "CVContact",
         fontName="Helvetica",
-        fontSize=9,
+        fontSize=contact_pt,
         alignment=TA_CENTER,
         textColor=GRAY,
-        spaceAfter=14,
-        leading=11,
+        spaceAfter=12,
+        leading=contact_pt * 1.2,
     )
     sec_title = ParagraphStyle(
         "CVSec",
         fontName="Helvetica-Bold",
-        fontSize=11,
+        fontSize=section_pt,
         alignment=TA_LEFT,
         textColor=BLACK,
-        spaceBefore=8,
+        spaceBefore=6,
         spaceAfter=2,
-        leading=14,
+        leading=section_pt * 1.25,
     )
     body = ParagraphStyle(
         "CVBody",
         fontName="Helvetica",
-        fontSize=10,
+        fontSize=body_pt,
         alignment=TA_LEFT,
         textColor=BLACK,
-        leading=13.5,
-        spaceAfter=3,
+        leading=line_lead,
+        spaceAfter=2,
     )
     body_justify = ParagraphStyle(
         "CVBodyJust",
@@ -153,10 +166,10 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
     foot = ParagraphStyle(
         "CVFoot",
         fontName="Helvetica",
-        fontSize=7.5,
+        fontSize=7.2,
         alignment=TA_CENTER,
         textColor=colors.HexColor("#666666"),
-        spaceBefore=10,
+        spaceBefore=8,
     )
 
     story: list = []
@@ -168,7 +181,7 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
         contact_html = " &nbsp;|&nbsp; ".join(escape(p) for p in c_parts)
         story.append(Paragraph(contact_html, contact_style))
     else:
-        story.append(Spacer(1, 0.2 * cm))
+        story.append(Spacer(1, 0.15 * cm))
 
     order = [
         ("Professional Summary", "professional_summary", True),
@@ -221,7 +234,7 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
                 )
             )
             story.append(tbl)
-            story.append(Spacer(1, 0.15 * cm))
+            story.append(Spacer(1, 0.12 * cm))
             continue
 
         text = str(val if isinstance(val, str) else "").strip()
@@ -231,16 +244,20 @@ def build_job_resume_pdf(bundle: dict, user, output_path: str) -> str:
         style = body_justify if justify else body
         story.append(Paragraph(_para_html(text), style))
 
-    story.append(Spacer(1, 0.2 * cm))
-    story.append(
-        Paragraph(
-            escape(
-                f"Target role: {job_role} · JD keyword alignment (estimate): {ats}/100 — "
-                "Content sourced from your upload; recommended skills are learning gaps only."
-            ),
-            foot,
+    story.append(Spacer(1, 0.15 * cm))
+    ab = bundle.get("ats_before")
+    aa = bundle.get("ats_after")
+    if ab is not None and aa is not None:
+        foot_line = (
+            f"Target role: {job_role} · JD alignment estimate — Before: {int(ab)}/100 → After: {int(aa)}/100. "
+            "Content from your upload only; recommended skills are learning gaps."
         )
-    )
+    else:
+        foot_line = (
+            f"Target role: {job_role} · JD keyword alignment (estimate): {ats}/100 — "
+            "Content sourced from your upload; recommended skills are learning gaps only."
+        )
+    story.append(Paragraph(escape(foot_line), foot))
     doc.build(story)
     return output_path
 
@@ -274,16 +291,23 @@ def build_job_resume_docx(bundle: dict, user, output_path: str) -> str:
     match = bundle.get("match") or {}
     ats = int(match.get("ats_match_score", 0) or 0)
 
+    sp = bundle.get("style_profile") or {}
+    name_pt = float(sp.get("name_pt", 20))
+    contact_pt = float(sp.get("contact_pt", 9))
+    section_pt = float(sp.get("section_pt", 11))
+    body_pt = float(sp.get("body_pt", 10))
+    margin_pt = max(36, min(52, int(float(sp.get("margins_cm", 1.45)) * 28.346)))  # cm to pt ~28.35 pt/cm
+
     d = Document()
     sec = d.sections[0]
-    sec.top_margin = sec.bottom_margin = sec.left_margin = sec.right_margin = Pt(54)
+    sec.top_margin = sec.bottom_margin = sec.left_margin = sec.right_margin = Pt(margin_pt)
 
     # Name
     p = d.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r = p.add_run((user.full_name or user.username or "Candidate").strip().upper())
     r.bold = True
-    r.font.size = Pt(20)
+    r.font.size = Pt(name_pt)
     r.font.color.rgb = RGBColor(0, 0, 0)
 
     c_parts = _contact_line_parts(user, bundle)
@@ -291,7 +315,7 @@ def build_job_resume_docx(bundle: dict, user, output_path: str) -> str:
         pc = d.add_paragraph(" | ".join(c_parts))
         pc.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for run in pc.runs:
-            run.font.size = Pt(9)
+            run.font.size = Pt(contact_pt)
             run.font.color.rgb = RGBColor(51, 51, 51)
     d.add_paragraph()
 
@@ -310,7 +334,7 @@ def build_job_resume_docx(bundle: dict, user, output_path: str) -> str:
         ph = d.add_paragraph()
         rh = ph.add_run(title)
         rh.bold = True
-        rh.font.size = Pt(11)
+        rh.font.size = Pt(section_pt)
         _docx_set_bottom_border(ph)
         ph.paragraph_format.space_after = Pt(8)
 
@@ -358,15 +382,24 @@ def build_job_resume_docx(bundle: dict, user, output_path: str) -> str:
             pb = d.add_paragraph(block)
             pb.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY if justify else WD_ALIGN_PARAGRAPH.LEFT
             for run in pb.runs:
-                run.font.size = Pt(10)
+                run.font.size = Pt(body_pt)
                 run.font.name = "Calibri"
 
     fn = d.add_paragraph()
     fn.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    rr = fn.add_run(
-        f"Target role: {job_role} · JD alignment (estimate): {ats}/100 — "
-        "Sourced from your upload; recommended skills are gaps only."
-    )
+    ab = bundle.get("ats_before")
+    aa = bundle.get("ats_after")
+    if ab is not None and aa is not None:
+        foot_txt = (
+            f"Target role: {job_role} · JD alignment estimate — Before: {int(ab)}/100 → After: {int(aa)}/100. "
+            "Sourced from your upload; recommended skills are gaps only."
+        )
+    else:
+        foot_txt = (
+            f"Target role: {job_role} · JD alignment (estimate): {ats}/100 — "
+            "Sourced from your upload; recommended skills are gaps only."
+        )
+    rr = fn.add_run(foot_txt)
     rr.italic = True
     rr.font.size = Pt(8)
     rr.font.color.rgb = RGBColor(102, 102, 102)

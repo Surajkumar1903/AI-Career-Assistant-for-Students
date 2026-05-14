@@ -2,7 +2,9 @@
 Authentication routes: register, login, logout, profile
 """
 import os
+import re
 
+from email_validator import EmailNotValidError, validate_email
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -12,6 +14,20 @@ from models.database import db
 from models.user import User
 
 auth_bp = Blueprint('auth', __name__)
+
+
+def _unique_username_from_email(email: str) -> str:
+    """Build a URL-safe unique username from the email local-part (form has no username field)."""
+    local = (email or '').split('@')[0].lower()
+    base = re.sub(r'[^a-z0-9_]', '', local) or 'user'
+    base = base[:48]
+    candidate = base
+    n = 1
+    while User.query.filter_by(username=candidate).first():
+        suffix = f'_{n}'
+        candidate = (base[: max(1, 80 - len(suffix))] + suffix)[:80]
+        n += 1
+    return candidate
 
 
 def _founder_banner_static_url():
@@ -45,15 +61,34 @@ def register():
         return redirect(url_for('dashboard.home'))
 
     if request.method == 'POST':
-        username   = request.form.get('username', '').strip()
-        email      = request.form.get('email', '').strip().lower()
-        password   = request.form.get('password', '')
-        confirm    = request.form.get('confirm_password', '')
-        full_name  = request.form.get('full_name', '').strip()
+        email     = request.form.get('email', '').strip().lower()
+        password  = request.form.get('password', '')
+        confirm   = request.form.get('confirm_password', '')
+        full_name = request.form.get('full_name', '').strip()
+        terms_ok  = request.form.get('terms') == 'yes'
 
-        # ── Validation ────────────────────────────────────────────────────────
-        if not all([username, email, password, confirm]):
-            flash('All fields are required.', 'danger')
+        # ── Validation (form has full_name + email + passwords only; username is derived) ──
+        if not full_name:
+            flash('Please enter your full name.', 'danger')
+            return render_template('register.html')
+
+        if not email:
+            flash('Please enter your email address.', 'danger')
+            return render_template('register.html')
+
+        try:
+            validated = validate_email(email, check_deliverability=False)
+            email = validated.normalized.lower()
+        except EmailNotValidError:
+            flash('Please enter a valid email address (example: name@gmail.com).', 'danger')
+            return render_template('register.html')
+
+        if not password or not confirm:
+            flash('Please enter and confirm your password.', 'danger')
+            return render_template('register.html')
+
+        if not terms_ok:
+            flash('Please agree to the Terms & Conditions and Privacy Policy to continue.', 'danger')
             return render_template('register.html')
 
         if password != confirm:
@@ -63,6 +98,8 @@ def register():
         if len(password) < 6:
             flash('Password must be at least 6 characters.', 'danger')
             return render_template('register.html')
+
+        username = request.form.get('username', '').strip() or _unique_username_from_email(email)
 
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'danger')
